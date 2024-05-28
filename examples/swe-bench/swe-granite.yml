@@ -1,0 +1,84 @@
+base_model: # path to model (huggingface repo or local directory)
+model_type: AutoModelForCausalLM
+tokenizer_type: AutoTokenizer
+load_in_8bit: false
+load_in_4bit: false
+strict: false
+torch_compile: true
+unfrozen_parameters:
+  # - model.*
+  # - lm_head.*
+  # - model.embed_tokens.* 
+  # - model.layers.\d+.block_sparse_moe.gate.*
+  # - transformer\.h\.\d+\.attn\.(c_attn|c_proj)\.(weight|bias)
+
+shuffle_merged_datasets: true
+datasets:
+  - path: # Path to the swe-bench train dataset (.jsonl)
+    type:
+      system_prompt: ""
+      field_system: system
+      field_instruction: input
+      field_output: output
+      format: "Question: {instruction} Answer:"
+      no_input_format: "Question: {instruction} Answer:"
+
+# copied from swe-llama details
+adapter: lora
+lora_r: 16
+lora_alpha: 16
+lora_dropout: 0.05
+lora_target_modules:
+  - q_proj
+  - k_proj
+  - v_proj
+  - o_proj
+  
+dataset_prepared_path: last_run_prepared
+output_dir: 
+val_set_size: 0.0
+sequence_len: 8192
+sample_packing: true
+pad_to_sequence_len: true
+
+wandb_project: 
+wandb_entity: 
+wandb_watch: all
+wandb_name: swe-granite
+wandb_log_model:
+
+gradient_accumulation_steps: 4
+micro_batch_size: 1
+num_epochs: 5
+optimizer: adamw_torch
+weight_decay: 0.1
+lr_scheduler: cosine
+learning_rate: 6e-4
+cosine_min_lr_ratio: 0.1 # decay lr to this fraction of the peak value
+# warmup_steps: 100
+warmup_ratio: 0.01
+
+gradient_checkpointing: true
+train_on_inputs: false
+group_by_length: false
+bf16: auto
+fp16:
+tf32: false
+
+early_stopping_patience:
+logging_steps: 1
+xformers_attention:
+flash_attention: true
+
+eval_batch_size: 
+eval_max_new_tokens: # Total number of tokens generated for predictions sent to wandb. Default is 128
+eval_table_size: # Approximate number of predictions sent to wandb depending on batch size. Enabled above 0. Default is 0
+eval_causal_lm_metrics: # HF evaluate metrics used during evaluation. Default is ["sacrebleu", "comet", "ter", chrf]
+evals_per_epoch: 0
+saves_per_epoch: 2
+
+deepspeed: deepspeed_configs/zero3_bf16.json
+seed: 42
+resume_from_checkpoint: 
+auto_resume_from_checkpoints: false
+local_rank:
